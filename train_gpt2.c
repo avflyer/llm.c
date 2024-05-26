@@ -168,7 +168,7 @@ void matmul_forward_naive(float* out,
     // unfriendly input shapes inside matmul_forward(), below.
 
     int b, t, o, i;
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2) private(b, t, o, i)
     for (b = 0; b < B; b++) {
         for (t = 0; t < T; t++) {
             int bt = b * T + t;
@@ -203,7 +203,7 @@ void matmul_forward(float* out,
     // collapse the B and T loops into one and turn it into a strided loop.
     // then we can tile the inner loop, and reuse the loaded weight LOOP_UNROLL many times
     int obt, o, ibt, i;
-    #pragma omp parallel for
+    #pragma omp parallel for private(obt, o, ibt, i)
     for (obt = 0; obt < B * T; obt += LOOP_UNROLL) {
         for (o = 0; o < OC; o++) {
             // we'll keep LOOP_UNROLL many results in registers
@@ -240,7 +240,7 @@ void matmul_backward(float* dinp, float* dweight, float* dbias,
 
     // backward into inp first, parallelize over B,T
     int b, t, o, i;
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2) private(b, t, o, i)
     for (b = 0; b < B; b++) {
         for (t = 0; t < T; t++) {
             const float* dout_bt = dout + b * T * OC + t * OC;
@@ -255,7 +255,7 @@ void matmul_backward(float* dinp, float* dweight, float* dbias,
         }
     }
     // backward into weight/bias, parallelize over output channels OC
-    #pragma omp parallel for
+    #pragma omp parallel for private(b, t, o, i)
     for (o = 0; o < OC; o++) {
         for (b = 0; b < B; b++) {
             for (t = 0; t < T; t++) {
@@ -287,7 +287,7 @@ void attention_forward(float* out, float* preatt, float* att,
     float scale = 1.0 / sqrtf(hs);
     int b, t, h, t2, i;
 
-    #pragma omp parallel for collapse(3)
+    #pragma omp parallel for collapse(3) private(b, t, h, t2, i)
     for (b = 0; b < B; b++) {
         for (t = 0; t < T; t++) {
             for (h = 0; h < NH; h++) {
@@ -457,7 +457,7 @@ void softmax_forward(float* probs, float* logits, int B, int T, int V, int Vp) {
     // Vp is the padded vocab size (for efficiency), V is the "real" vocab size
     // example: Vp is 50304 and V is 50257
     int b, t, i;
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2) private(b, t, i)
     for (b = 0; b < B; b++) {
         for (t = 0; t < T; t++) {
             // probs <- softmax(logits)
